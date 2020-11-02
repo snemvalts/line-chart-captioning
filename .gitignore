@@ -1,2 +1,2 @@
-data/datasets/*
-!data/datasets/README.md
+data/figureqa/*
+!data/figureqa/README.md
