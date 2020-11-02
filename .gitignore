@@ -1,2 +1,4 @@
 data/figureqa/*
 !data/figureqa/README.md
+
+data/processed/
