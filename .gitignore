@@ -1,4 +1,4 @@
 data/figureqa/*
 !data/figureqa/README.md
-
+.DS_Store
 data/processed/
