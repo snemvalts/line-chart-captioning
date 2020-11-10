@@ -3,7 +3,7 @@ import pathlib
 from shutil import copyfile
 
 
-USE_TRAIN = False
+USE_TRAIN = True
 
 if (USE_TRAIN):
     data_folder = "../data/figureqa/train1/" 
@@ -13,7 +13,7 @@ else:
 
 
 # https://github.com/Maluuba/FigureQA/blob/master/docs/question_id_map.txt
-line_question_id_map = {
+question_type_to_id = {
     "MIN_AUC": 6,
     "MAX_AUC": 7,
     "SMOOTHEST": 8,
@@ -25,11 +25,82 @@ line_question_id_map = {
     "INTERSECT": 14 
 }
 
+question_id_to_type = {v: k for k, v in question_type_to_id.items()}
+
+
+# can be used to check whether the original question is in expected form
+question_ab_form = {
+    "MIN_AUC": "Does A have the minimum area under the curve?",
+    "MAX_AUC": "Does A have the maximum area under the curve?",
+    "SMOOTHEST": "Is A the smoothest?",
+    "ROUGHEST": "Is A the roughest?",
+    "GLOBAL_MIN": "Does A have the lowest value?", 
+    "GLOBAL_MAX": "Does A have the highest value?",
+    "LESS": "Is A smaller than B?",
+    "GREATER": "Is A greater than B?",
+    "INTERSECT": "Does A intersect B?",
+}
+
+
+
 def question_types_to_id(questions):
-    return list(map(lambda question_type: line_question_id_map[question_type], questions))
+    return list(map(lambda question_type: question_type_to_id[question_type], questions))
+
+
+# generates a description for the plot, based on the question
+def question_to_description(question):
+    if (question['answer'] != 1):
+        raise ValueError("Can't generate description for false question")
+    
+    question_type = question_id_to_type[question['question_id']]
+
+    if (question_type == 'LESS'):
+        return f"{question['color1_name']} is less than {question['color2_name']}"
+    elif (question_type == 'GREATER'):
+        return f"{question['color1_name']} is greater than {question['color2_name']}"
+    elif (question_type == 'INTERSECT'):
+        return f"{question['color1_name']} intersects {question['color2_name']}"
+    elif (question_type == 'GLOBAL_MAX'):
+        return f"{question['color1_name']} has the highest value"
+    elif (question_type == 'GLOBAL_MIN'):
+        return f"{question['color1_name']} has the lowest value"
+    elif (question_type == 'SMOOTHEST'):
+        return f"{question['color1_name']} is the smoothest"
+    elif (question_type == 'ROUGHEST'):
+        return f"{question['color1_name']} is the roughest"
+    elif (question_type == 'MIN_AUC'):
+        return f"{question['color1_name']} has the minimum area under the curve"
+    elif (question_type == 'MAX_AUC'):
+        return f"{question['color1_name']} has the maximum area under the curve"  
+
 
 def load_data():
     processed_plots = []
+    image_index_to_qas = {}
+
+    with open(f"{data_folder}/qa_pairs.json", "r") as f:
+        print("parsing QA...")
+        qa_pairs = json.load(f)["qa_pairs"]
+
+
+        desired_question_ids = question_types_to_id(["GREATER", "LESS", "INTERSECT"])
+        desired_qa = list(
+            filter(
+                lambda qa: qa["question_id"] in desired_question_ids, 
+                filter(
+                    lambda qa: qa['answer'] == 1,
+                    qa_pairs
+                )
+            )
+        )
+
+        for qa in desired_qa:
+            image_index = qa['image_index']
+            if(image_index in image_index_to_qas):
+                image_index_to_qas[image_index].append(qa)
+            else:
+                image_index_to_qas[image_index] = [qa]
+
 
     with open(f"{data_folder}/annotations.json", "r") as f:
         print("parsing annotations...")
@@ -38,23 +109,19 @@ def load_data():
         print("processing plots...")
         for plot in line_plots:
             plot_data = extract_plot_data(plot["models"])
-            processed_plots.append({
-                # if needed, can have all sorts of data from here 
-                "image_name": f"{plot["image_index"]}.png",
-                "data": plot_data
-            })
+
+            qas_for_plot = image_index_to_qas[plot["image_index"]] if plot["image_index"] in image_index_to_qas else []
+            
+            descriptions_for_plot = list(map(lambda qa: question_to_description(qa), qas_for_plot))
+
+            if (len(descriptions_for_plot) > 0):
+                processed_plots.append({
+                    # if needed, can have all sorts of data from here 
+                    "image_name": f"{plot['image_index']}.png",
+                    "data": plot_data,
+                    "descriptions": descriptions_for_plot
+                })
     
-    with open(f"{data_folder}/qa_pairs.json", "r") as f:
-        print("parsing QA...")
-        qa_pairs = json.load(f)["qa_pairs"]
-        line_plot_indexes = list(map(lambda plot: plot["image_index"], line_plots))
-
-
-        # it"s faster to do this
-        desired_question_ids = question_types_to_id(["GREATER", "LESS", "INTERSECT"])
-
-        line_qa_questions = list(filter(lambda qa: qa["question_id"] in desired_question_ids, qa_pairs))
-        print(list(map(lambda x: x["question_string"], line_qa_questions)))
         
     return processed_plots
 
@@ -74,10 +141,10 @@ def write_metadata_json(data):
 def copy_images(data):
     print("copying images...")
     for plot in data:
-        copyfile(f"{data_folder}/png/{plot["image_name"]}", f"../data/processed/images/{plot["image_name"]}")
+        copyfile(f"{data_folder}/png/{plot['image_name']}", f"../data/processed/images/{plot['image_name']}")
 
 data = load_data()
-#pathlib.Path("../data/processed/images").mkdir(parents=True, exist_ok=True)
+pathlib.Path("../data/processed/images").mkdir(parents=True, exist_ok=True)
 
-#copy_images(data)
-#write_metadata_json(data)
+copy_images(data)
+write_metadata_json(data)
