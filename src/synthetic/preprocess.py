@@ -1,14 +1,14 @@
 import json
 import pathlib
 from shutil import copyfile
-
+import csv
 
 USE_TRAIN = True
 
 if (USE_TRAIN):
-    data_folder = "../data/figureqa/train1/" 
+    data_folder = "data/figureqa/train1/" 
 else:
-    data_folder = "../data/figureqa/sample_train1/"
+    data_folder = "data/figureqa/sample_train1/"
 
 
 
@@ -118,6 +118,7 @@ def load_data():
                 processed_plots.append({
                     # if needed, can have all sorts of data from here 
                     "image_name": f"{plot['image_index']}.png",
+                    "image_number": plot['image_index'],
                     "data": plot_data,
                     "descriptions": descriptions_for_plot
                 })
@@ -135,16 +136,34 @@ def extract_plot_data(models):
 
 def write_metadata_json(data):
     print("writing json...")
-    with open("../data/processed/data.json", "w") as f:
+    with open("data/processed_synthetic/data.json", "w") as f:
         json.dump(data, f)
+
+
+def write_captions_csv(data):
+    csv_rows = []
+
+    for plot in data:
+        image_number = plot['image_number']
+        description = ". ".join(plot['descriptions'])
+        csv_rows.append([image_number, description])
+
+    print("writing csv...")
+    with open("data/processed_synthetic/captions.csv", mode="w") as captions_file:
+        captions_writer = csv.writer(captions_file)
+
+        captions_writer.writerow(['number', 'caption'])
+        captions_writer.writerows(csv_rows)
+
 
 def copy_images(data):
     print("copying images...")
     for plot in data:
-        copyfile(f"{data_folder}/png/{plot['image_name']}", f"../data/processed/images/{plot['image_name']}")
+        copyfile(f"{data_folder}/png/{plot['image_name']}", f"data/processed_synthetic/images/{plot['image_name']}")
 
 data = load_data()
-pathlib.Path("../data/processed/images").mkdir(parents=True, exist_ok=True)
+pathlib.Path("data/processed_synthetic/images").mkdir(parents=True, exist_ok=True)
 
 copy_images(data)
-write_metadata_json(data)
+#write_metadata_json(data)
+write_captions_csv(data)

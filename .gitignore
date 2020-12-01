@@ -1,4 +1,7 @@
 data/figureqa/*
 !data/figureqa/README.md
+data/charttotext/*
+!data/charttotext/README.md
 .DS_Store
-data/processed/
+data/processed_synthetic/
+data/processed_natural/
