@@ -5,6 +5,8 @@ import csv
 
 USE_TRAIN = True
 
+
+#TODO: more trainsets here?
 if (USE_TRAIN):
     data_folder = "data/figureqa/train1/" 
 else:
