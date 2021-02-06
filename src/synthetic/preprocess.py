@@ -3,6 +3,7 @@ import pathlib
 from shutil import copyfile
 import csv
 import string
+import sys
 
 USE_TRAIN = True
 
@@ -143,10 +144,11 @@ def replace_subjects(data):
         subject_replacement_map = dict(zip(subject_names, replacement_subject_names))
 
         for idx, description in enumerate(plot['descriptions']):
-            for subject in subject_replacement_map.keys():
+            # largest elements first: prevents cases where substring is replaced first
+            for subject in sorted(subject_replacement_map.keys(), reverse=True):
                 plot['descriptions'][idx] = plot['descriptions'][idx].replace(subject, subject_replacement_map[subject])
 
-        plot['subject_map'] = {v: k for k, v in subject_replacement_map.items()}
+        plot['subject_map'] = {replacement: subject for subject, replacement in subject_replacement_map.items()}
 
 
 # models: list of models, as specified in annotations_format.txt
@@ -163,16 +165,37 @@ def write_metadata_json(data):
         json.dump(data, f)
 
 
-def write_captions_csv(data, include_subjects=False):
+def write_captions_csv(data, description_limit, include_subjects=None, unroll_descriptions=False):
+    def get_row(plot, replacement_description=None):
+        image_number = plot['image_number']
+        description = None
+
+        if (replacement_description is not None):
+            description = replacement_description
+        elif (description_limit is None):
+            description = ". ".join(plot['descriptions'])
+        else:
+            description = ". ".join(plot['descriptions'][:description_limit])
+        
+        if (include_subjects):
+            return [image_number, description, plot['subject_map']]
+        else:
+            return [image_number, description]
+        
+    
     csv_rows = []
 
     for plot in data:
-        image_number = plot['image_number']
-        description = ". ".join(plot['descriptions'])
-        if (include_subjects):
-            csv_rows.append([image_number, description, plot['subject_map']])
+        if (unroll_descriptions):
+            # if we want to unroll a description with multiple sentences to n plot with a single sentence description,
+            # we go over all the sentences and provide a replacement description
+            for description_sentence in plot['descriptions']:
+                csv_rows.append(get_row(
+                    plot, 
+                    replacement_description=description_sentence
+                ))
         else:
-            csv_rows.append([image_number, description])
+            csv_rows.append(get_row(plot))
 
     print("writing csv...")
     with open("data/processed_synthetic/captions.csv", mode="w") as captions_file:
@@ -193,16 +216,20 @@ def copy_images(data):
 
 
 if __name__ == "__main__":
-    import sys
-    
+    unroll_descriptions_flag_present = '--unroll-descriptions' in sys.argv[1:]
     replace_subjects_flag_present = '--replace-subjects' in sys.argv[1:]
+    description_limit_flag_present = '--description-limit' in sys.argv[1:]
+    description_limit = int(sys.argv[sys.argv.index('--description-limit') + 1]) if description_limit_flag_present else None
+
+    assert not(unroll_descriptions_flag_present and description_limit_flag_present), 'Cannot pass unroll and description limit flag concurrently'
 
     data = load_data()
     if (replace_subjects_flag_present):
         replace_subjects(data)
 
-    print(data[0])
     pathlib.Path("data/processed_synthetic/images").mkdir(parents=True, exist_ok=True)
     copy_images(data)
     #write_metadata_json(data)
-    write_captions_csv(data, include_subjects=replace_subjects_flag_present)
+    write_captions_csv(data, description_limit, 
+                       include_subjects=replace_subjects_flag_present,
+                       unroll_descriptions=unroll_descriptions_flag_present)
