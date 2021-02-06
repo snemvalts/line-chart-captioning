@@ -2,6 +2,7 @@ import json
 import pathlib
 from shutil import copyfile
 import csv
+import string
 
 USE_TRAIN = True
 
@@ -128,6 +129,26 @@ def load_data():
         
     return processed_plots
 
+
+# replace subjects with <A>, <B>, <C>...
+def replace_subjects(data):
+    print('replacing subjects...')
+    for plot in data:
+        subject_names = list(map(lambda x: x['name'], plot['data']))
+        #['A', 'B', 'C']
+        replacement_subject_names = string.ascii_uppercase[:len(subject_names)]
+        #['<A>', '<B>', '<C>']
+        replacement_subject_names = list(map(lambda x: f'<{x}>', replacement_subject_names))
+        # {'Red Violet': '<A>', 'Green Lime': '<B>'}
+        subject_replacement_map = dict(zip(subject_names, replacement_subject_names))
+
+        for idx, description in enumerate(plot['descriptions']):
+            for subject in subject_replacement_map.keys():
+                plot['descriptions'][idx] = plot['descriptions'][idx].replace(subject, subject_replacement_map[subject])
+
+        plot['subject_map'] = {v: k for k, v in subject_replacement_map.items()}
+
+
 # models: list of models, as specified in annotations_format.txt
 def extract_plot_data(models):
     return list(map(lambda model: {
@@ -135,26 +156,32 @@ def extract_plot_data(models):
         "values": list(zip(model["x"],model["y"])),
     }, models))
 
-
+# dump the whole metadata as json
 def write_metadata_json(data):
     print("writing json...")
     with open("data/processed_synthetic/data.json", "w") as f:
         json.dump(data, f)
 
 
-def write_captions_csv(data):
+def write_captions_csv(data, include_subjects=False):
     csv_rows = []
 
     for plot in data:
         image_number = plot['image_number']
         description = ". ".join(plot['descriptions'])
-        csv_rows.append([image_number, description])
+        if (include_subjects):
+            csv_rows.append([image_number, description, plot['subject_map']])
+        else:
+            csv_rows.append([image_number, description])
 
     print("writing csv...")
     with open("data/processed_synthetic/captions.csv", mode="w") as captions_file:
         captions_writer = csv.writer(captions_file)
 
-        captions_writer.writerow(['number', 'caption'])
+        if (include_subjects):
+            captions_writer.writerow(['number', 'caption', 'subject_map'])
+        else:
+            captions_writer.writerow(['number', 'caption'])
         captions_writer.writerows(csv_rows)
 
 
@@ -163,9 +190,19 @@ def copy_images(data):
     for plot in data:
         copyfile(f"{data_folder}/png/{plot['image_name']}", f"data/processed_synthetic/images/{plot['image_name']}")
 
-data = load_data()
-pathlib.Path("data/processed_synthetic/images").mkdir(parents=True, exist_ok=True)
 
-copy_images(data)
-#write_metadata_json(data)
-write_captions_csv(data)
+
+if __name__ == "__main__":
+    import sys
+    
+    replace_subjects_flag_present = '--replace-subjects' in sys.argv[1:]
+
+    data = load_data()
+    if (replace_subjects_flag_present):
+        replace_subjects(data)
+
+    print(data[0])
+    pathlib.Path("data/processed_synthetic/images").mkdir(parents=True, exist_ok=True)
+    copy_images(data)
+    #write_metadata_json(data)
+    write_captions_csv(data, include_subjects=replace_subjects_flag_present)
