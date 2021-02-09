@@ -15,11 +15,19 @@ To generate the synthetic dataset, place the downloaded folders to `data/figureq
 
 ```python3 src/synthetic/preprocess.py```
 
+Flags you can provide:
+* `--unroll-descriptions`: By default, if a plot/figure/graph has more than 1 description, they are concatenated. 
+This flag unrolls the descriptions, to create `n` rows in `captions.csv` if there are `n > 1` descriptions for a given graph.
+* `--replace-subjects`: Replaces subjects in descriptions. For example `Red is greater than Blue` becomes `<A> is greater than <B>`.
+This flag also adds `subject_map` column to `captions.csv`, so for every plot there is a JSON blob string that maps replacements to original subjects.
+* `--description-limit N`: Limits description length in sentences. Cannot be present together with `--unroll-descriptions`
+* `--synthetic-config FILE`: Provide a config file for custom question templates and desired question types. An example file is provided (`synthetic.default.json`). For correct forms, check `question_to_description` in `src/synthetic/preprocess.py`. For question IDs, check keys in `question_type_to_id`
+
 Dataset will be placed to `data/processed_synthetic`.
 
 ### Generating natural-language dataset
 
-To generate the natural-language dataset, place the downloaded folders to `data/figureqa` (check the README there), and run 
+To generate the natural-language dataset, place the downloaded folders to `data/charttotext` (check the README there), and run 
 
 ```python3 src/natural/preprocess.py```
 
