@@ -145,7 +145,7 @@ def replace_subjects(data):
 
         for idx, description in enumerate(plot['descriptions']):
             # largest elements first: prevents cases where substring is replaced first
-            for subject in sorted(subject_replacement_map.keys(), reverse=True):
+            for subject in sorted(subject_replacement_map.keys(), reverse=True, key=len):
                 plot['descriptions'][idx] = plot['descriptions'][idx].replace(subject, subject_replacement_map[subject])
 
         plot['subject_map'] = {replacement: subject for subject, replacement in subject_replacement_map.items()}
