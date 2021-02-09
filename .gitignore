@@ -5,3 +5,4 @@ data/charttotext/*
 .DS_Store
 data/processed_synthetic/
 data/processed_natural/
+synthetic-config.json

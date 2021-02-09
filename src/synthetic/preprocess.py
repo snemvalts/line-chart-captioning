@@ -4,6 +4,7 @@ from shutil import copyfile
 import csv
 import string
 import sys
+import random
 
 USE_TRAIN = True
 
@@ -52,11 +53,28 @@ def question_types_to_id(questions):
 
 
 # generates a description for the plot, based on the question
-def question_to_description(question):
+def question_to_description(question, question_selection=None):
     if (question['answer'] != 1):
         raise ValueError("Can't generate description for false question")
     
     question_type = question_id_to_type[question['question_id']]
+
+    if (question_selection is not None):
+        question_selections = question_selection[question_type]
+        question_template = random.choice(question_selections)
+        color1_var_present = '<Color1>' in question_template
+        color2_var_present = '<Color2>' in question_template
+
+        final_question = question_template
+
+        if (color1_var_present):
+            final_question = final_question.replace('<Color1>', question['color1_name'])
+
+        if (color2_var_present):
+            final_question = final_question.replace('<Color2>', question['color2_name'])
+
+        return final_question
+
 
     if (question_type == 'LESS'):
         return f"{question['color1_name']} is less than {question['color2_name']}"
@@ -78,7 +96,7 @@ def question_to_description(question):
         return f"{question['color1_name']} has the maximum area under the curve"  
 
 
-def load_data():
+def load_data(questions=["GREATER", "LESS", "INTERSECT"], question_selection=None):
     processed_plots = []
     image_index_to_qas = {}
 
@@ -87,7 +105,7 @@ def load_data():
         qa_pairs = json.load(f)["qa_pairs"]
 
 
-        desired_question_ids = question_types_to_id(["GREATER", "LESS", "INTERSECT"])
+        desired_question_ids = question_types_to_id(questions)
         desired_qa = list(
             filter(
                 lambda qa: qa["question_id"] in desired_question_ids, 
@@ -116,7 +134,12 @@ def load_data():
 
             qas_for_plot = image_index_to_qas[plot["image_index"]] if plot["image_index"] in image_index_to_qas else []
             
-            descriptions_for_plot = list(map(lambda qa: question_to_description(qa), qas_for_plot))
+            descriptions_for_plot = list(
+                map(
+                    lambda qa: question_to_description(qa, question_selection=question_selection), 
+                    qas_for_plot
+                )
+            )
 
             if (len(descriptions_for_plot) > 0):
                 processed_plots.append({
@@ -216,6 +239,11 @@ def copy_images(data):
 
 
 if __name__ == "__main__":
+    # i want to do proper arg parsing but the only one who's going to suffer
+    # from this mess is probably only going to be me so 🤷
+    synthetic_config_flag_present = '--synthetic-config' in sys.argv[1:]
+    synthetic_config = json.load(open(sys.argv[sys.argv.index('--synthetic-config') + 1], 'r')) if synthetic_config_flag_present else None
+
     unroll_descriptions_flag_present = '--unroll-descriptions' in sys.argv[1:]
     replace_subjects_flag_present = '--replace-subjects' in sys.argv[1:]
     description_limit_flag_present = '--description-limit' in sys.argv[1:]
@@ -223,7 +251,14 @@ if __name__ == "__main__":
 
     assert not(unroll_descriptions_flag_present and description_limit_flag_present), 'Cannot pass unroll and description limit flag concurrently'
 
-    data = load_data()
+    if (synthetic_config is not None):
+        data = load_data(
+            questions=synthetic_config['questions'],
+            question_selection=synthetic_config['question_selection']
+        )
+    else:
+        data = load_data()
+    
     if (replace_subjects_flag_present):
         replace_subjects(data)
 

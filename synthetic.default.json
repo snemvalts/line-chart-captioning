@@ -1,0 +1,14 @@
+{
+  "questions": ["GREATER", "LESS", "INTERSECT"],
+  "question_selection": {
+    "GREATER": [
+      "<Color1> is greater than <Color2>"
+    ],
+    "LESS": [
+      "<Color1> is less than <Color2>"
+    ],
+    "INTERSECT": [
+      "<Color1> intersects <Color2>"
+    ]
+  }
+}
