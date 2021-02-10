@@ -13,7 +13,7 @@ The FigureQA dataset is used to generate a synthetic dataset, while Chart-to-Tex
 
 To generate the synthetic dataset, place the downloaded folders to `data/figureqa` (check the README there), and run 
 
-```python3 src/synthetic/preprocess.py```
+```python3 src/synthetic/preprocess.py data/fiqureqa/X```
 
 Flags you can provide:
 * `--unroll-descriptions`: By default, if a plot/figure/graph has more than 1 description, they are concatenated. 
@@ -23,7 +23,7 @@ This flag also adds `subject_map` column to `captions.csv`, so for every plot th
 * `--description-limit N`: Limits description length in sentences. Cannot be present together with `--unroll-descriptions`
 * `--synthetic-config FILE`: Provide a config file for custom question templates and desired question types. An example file is provided (`synthetic.default.json`). For correct forms, check `question_to_description` in `src/synthetic/preprocess.py`. For question IDs, check keys in `question_type_to_id`
 
-Dataset will be placed to `data/processed_synthetic`.
+Dataset will be placed to `data/processed_synthetic/X`.
 
 ### Generating natural-language dataset
 

@@ -6,15 +6,6 @@ import string
 import sys
 import random
 
-USE_TRAIN = True
-
-
-#TODO: more trainsets here?
-if (USE_TRAIN):
-    data_folder = "data/figureqa/train1/" 
-else:
-    data_folder = "data/figureqa/sample_train1/"
-
 
 
 # https://github.com/Maluuba/FigureQA/blob/master/docs/question_id_map.txt
@@ -96,7 +87,7 @@ def question_to_description(question, question_selection=None):
         return f"{question['color1_name']} has the maximum area under the curve"  
 
 
-def load_data(questions=["GREATER", "LESS", "INTERSECT"], question_selection=None):
+def load_data(data_folder, questions=["GREATER", "LESS", "INTERSECT"], question_selection=None):
     processed_plots = []
     image_index_to_qas = {}
 
@@ -188,7 +179,7 @@ def write_metadata_json(data):
         json.dump(data, f)
 
 
-def write_captions_csv(data, description_limit, include_subjects=None, unroll_descriptions=False):
+def write_captions_csv(data, dest_folder_name, description_limit, include_subjects=None, unroll_descriptions=False):
     def get_row(plot, replacement_description=None):
         image_number = plot['image_number']
         description = None
@@ -221,7 +212,7 @@ def write_captions_csv(data, description_limit, include_subjects=None, unroll_de
             csv_rows.append(get_row(plot))
 
     print("writing csv...")
-    with open("data/processed_synthetic/captions.csv", mode="w") as captions_file:
+    with open(f"data/processed_synthetic/{dest_folder_name}/captions.csv", mode="w") as captions_file:
         captions_writer = csv.writer(captions_file)
 
         if (include_subjects):
@@ -231,10 +222,13 @@ def write_captions_csv(data, description_limit, include_subjects=None, unroll_de
         captions_writer.writerows(csv_rows)
 
 
-def copy_images(data):
+def copy_images(data, src_folder, dest_folder_name):
     print("copying images...")
     for plot in data:
-        copyfile(f"{data_folder}/png/{plot['image_name']}", f"data/processed_synthetic/images/{plot['image_name']}")
+        copyfile(
+            f"{src_folder}/png/{plot['image_name']}", 
+            f"data/processed_synthetic/{dest_folder_name}/images/{plot['image_name']}"
+        )
 
 
 
@@ -246,25 +240,30 @@ if __name__ == "__main__":
 
     unroll_descriptions_flag_present = '--unroll-descriptions' in sys.argv[1:]
     replace_subjects_flag_present = '--replace-subjects' in sys.argv[1:]
+
     description_limit_flag_present = '--description-limit' in sys.argv[1:]
     description_limit = int(sys.argv[sys.argv.index('--description-limit') + 1]) if description_limit_flag_present else None
+
+    src_folder = sys.argv[-1]
 
     assert not(unroll_descriptions_flag_present and description_limit_flag_present), 'Cannot pass unroll and description limit flag concurrently'
 
     if (synthetic_config is not None):
         data = load_data(
+            src_folder,
             questions=synthetic_config['questions'],
             question_selection=synthetic_config['question_selection']
         )
     else:
-        data = load_data()
-    
+        data = load_data(src_folder)
+
     if (replace_subjects_flag_present):
         replace_subjects(data)
 
-    pathlib.Path("data/processed_synthetic/images").mkdir(parents=True, exist_ok=True)
-    copy_images(data)
+    dest_folder_name = pathlib.Path(src_folder).name
+    pathlib.Path(f"data/processed_synthetic/{dest_folder_name}/images").mkdir(parents=True, exist_ok=True)
+    copy_images(data, src_folder, dest_folder_name)
     #write_metadata_json(data)
-    write_captions_csv(data, description_limit, 
+    write_captions_csv(data, dest_folder_name, description_limit, 
                        include_subjects=replace_subjects_flag_present,
                        unroll_descriptions=unroll_descriptions_flag_present)
