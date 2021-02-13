@@ -146,10 +146,19 @@ def load_data(data_folder, questions=["GREATER", "LESS", "INTERSECT"], question_
 
 
 # replace subjects with <A>, <B>, <C>...
-def replace_subjects(data):
+def replace_subjects(data, replace_locally=False):
     print('replacing subjects...')
     for plot in data:
         subject_names = list(map(lambda x: x['name'], plot['data']))
+        # here, we will only replace those subjects that are present in the single unrolled description
+        # so we won't have a, b, c, d, rather only a, b
+        if (replace_locally):
+            assert len(plot['descriptions']) == 1, f"Descriptions for plot {plot['name']} not unrolled"
+            # only include subjects that are present in the only unrolled description
+            subject_names = list(filter(lambda subject: subject in plot['descriptions'][0], subject_names))
+            # filter out any cases where "gold" ends up in subjects, even though it's only because "dark gold" really is
+            subject_names = [subject for subject in subject_names if len(list(filter(lambda other_subject: subject in other_subject, subject_names))) == 1]
+
         #['A', 'B', 'C']
         replacement_subject_names = string.ascii_uppercase[:len(subject_names)]
         #['<A>', '<B>', '<C>']
@@ -178,6 +187,7 @@ def write_metadata_json(data):
     with open("data/processed_synthetic/data.json", "w") as f:
         json.dump(data, f)
 
+# for plot with n descriptions, create n plots with 1 description each
 def unroll_descriptions(data):
     print("unrolling descriptions...")
     new_data = []
@@ -244,6 +254,7 @@ if __name__ == "__main__":
 
     unroll_descriptions_flag_present = '--unroll-descriptions' in sys.argv[1:]
     replace_subjects_flag_present = '--replace-subjects' in sys.argv[1:]
+    replace_subjects_locally_flag_present = '--replace-subjects-locally' in sys.argv[1:]
 
     description_limit_flag_present = '--description-limit' in sys.argv[1:]
     description_limit = int(sys.argv[sys.argv.index('--description-limit') + 1]) if description_limit_flag_present else None
@@ -251,6 +262,10 @@ if __name__ == "__main__":
     src_folder = sys.argv[-1]
 
     assert not(unroll_descriptions_flag_present and description_limit_flag_present), 'Cannot pass unroll and description limit flag concurrently'
+
+    # replace subjects locally only if unroll is present
+    # p -> q
+    assert not(replace_subjects_locally_flag_present) or unroll_descriptions_flag_present, 'For local subject replacement, descriptions must be unrolled as well'
 
     if (synthetic_config is not None):
         data = load_data(
@@ -264,13 +279,13 @@ if __name__ == "__main__":
     if (unroll_descriptions_flag_present):
         data = unroll_descriptions(data)
 
-    if (replace_subjects_flag_present):
-        replace_subjects(data)
+    if (replace_subjects_flag_present or replace_subjects_locally_flag_present):
+        replace_subjects(data, replace_locally = replace_subjects_locally_flag_present)
 
     dest_folder_name = pathlib.Path(src_folder).name
     pathlib.Path(f"data/processed_synthetic/{dest_folder_name}/images").mkdir(parents=True, exist_ok=True)
     copy_images(data, src_folder, dest_folder_name)
     #write_metadata_json(data)
     write_captions_csv(data, dest_folder_name, description_limit, 
-                       include_subjects=replace_subjects_flag_present,
+                       include_subjects=replace_subjects_flag_present or replace_subjects_locally_flag_present,
                        unroll_descriptions=unroll_descriptions_flag_present)
