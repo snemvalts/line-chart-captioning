@@ -178,15 +178,28 @@ def write_metadata_json(data):
     with open("data/processed_synthetic/data.json", "w") as f:
         json.dump(data, f)
 
+def unroll_descriptions(data):
+    print("unrolling descriptions...")
+    new_data = []
+    for plot in data:
+        # if we want to unroll a description with multiple sentences to n plot with a single sentence description,
+        # we go over all the sentences and provide a replacement description
+        for description_sentence in plot['descriptions']:
+            new_data.append(
+                {
+                    **plot,
+                    'descriptions': [description_sentence]
+                }
+            )
+
+    return new_data
 
 def write_captions_csv(data, dest_folder_name, description_limit, include_subjects=None, unroll_descriptions=False):
-    def get_row(plot, replacement_description=None):
+    def get_row(plot):
         image_number = plot['image_number']
         description = None
 
-        if (replacement_description is not None):
-            description = replacement_description
-        elif (description_limit is None):
+        if (description_limit is None):
             description = ". ".join(plot['descriptions'])
         else:
             description = ". ".join(plot['descriptions'][:description_limit])
@@ -200,16 +213,7 @@ def write_captions_csv(data, dest_folder_name, description_limit, include_subjec
     csv_rows = []
 
     for plot in data:
-        if (unroll_descriptions):
-            # if we want to unroll a description with multiple sentences to n plot with a single sentence description,
-            # we go over all the sentences and provide a replacement description
-            for description_sentence in plot['descriptions']:
-                csv_rows.append(get_row(
-                    plot, 
-                    replacement_description=description_sentence
-                ))
-        else:
-            csv_rows.append(get_row(plot))
+        csv_rows.append(get_row(plot))
 
     print("writing csv...")
     with open(f"data/processed_synthetic/{dest_folder_name}/captions.csv", mode="w") as captions_file:
@@ -256,6 +260,9 @@ if __name__ == "__main__":
         )
     else:
         data = load_data(src_folder)
+
+    if (unroll_descriptions_flag_present):
+        data = unroll_descriptions(data)
 
     if (replace_subjects_flag_present):
         replace_subjects(data)
