@@ -157,7 +157,6 @@ def replace_subjects(data, replace_locally=False):
             # only include subjects that are present in the only unrolled description
             subject_names = list(filter(lambda subject: subject in plot['descriptions'][0], subject_names))
             # filter out any cases where "gold" ends up in subjects, even though it's only because "dark gold" really is
-            subject_names = [subject for subject in subject_names if len(list(filter(lambda other_subject: subject in other_subject, subject_names))) == 1]
 
         #['A', 'B', 'C']
         replacement_subject_names = string.ascii_uppercase[:len(subject_names)]
@@ -253,6 +252,7 @@ if __name__ == "__main__":
     synthetic_config = json.load(open(sys.argv[sys.argv.index('--synthetic-config') + 1], 'r')) if synthetic_config_flag_present else None
 
     unroll_descriptions_flag_present = '--unroll-descriptions' in sys.argv[1:]
+
     replace_subjects_flag_present = '--replace-subjects' in sys.argv[1:]
     replace_subjects_locally_flag_present = '--replace-subjects-locally' in sys.argv[1:]
 
