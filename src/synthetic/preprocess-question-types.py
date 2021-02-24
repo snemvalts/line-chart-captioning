@@ -161,7 +161,7 @@ def write_captions_csv(data, dest_folder_name):
     with open(f"data/processed_synthetic/{dest_folder_name}/captions.csv", mode="w") as captions_file:
         captions_writer = csv.writer(captions_file)
 
-        captions_writer.writerow(['number', 'description_type', 'color1_name', 'color2_name'])
+        captions_writer.writerow(['number', 'description_type', 'color1_name', 'color2_name', 'all_subjects'])
         captions_writer.writerows(csv_rows)
 
 
