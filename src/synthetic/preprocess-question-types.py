@@ -144,12 +144,21 @@ def unroll_descriptions(data):
 def write_captions_csv(data, dest_folder_name):
     def get_row(plot):
         image_number = plot['image_number']
-        description_type = plot['descriptions'][0]['description_type']
-        color1_name = plot['descriptions'][0]['color1_name']
-        color2_name = plot['descriptions'][0]['color2_name']
         all_subjects = list(map(lambda x: x['name'], plot['data']))
 
-        return [image_number, description_type, color1_name, color2_name, all_subjects]
+        descriptions = []
+
+        for description in plot['descriptions']:
+            description_type = description['description_type']
+            color1_name = description['color1_name']
+            color2_name = description['color2_name']
+            descriptions.append([description_type, color1_name, color2_name])
+
+
+        return [image_number, json.dumps(descriptions), json.dumps(all_subjects)]
+    
+    def get_header():
+        return ['number', 'description_blob', 'all_subjects_blob']
         
     
     csv_rows = []
@@ -161,7 +170,7 @@ def write_captions_csv(data, dest_folder_name):
     with open(f"data/processed_synthetic/{dest_folder_name}/captions.csv", mode="w") as captions_file:
         captions_writer = csv.writer(captions_file)
 
-        captions_writer.writerow(['number', 'description_type', 'color1_name', 'color2_name', 'all_subjects'])
+        captions_writer.writerow(get_header())
         captions_writer.writerows(csv_rows)
 
 
@@ -193,7 +202,7 @@ if __name__ == "__main__":
     else:
         data = load_data(src_folder)
 
-    data = unroll_descriptions(data)
+    #data = unroll_descriptions(data)
 
 
     dest_folder_name = f"{pathlib.Path(src_folder).name}-types"
