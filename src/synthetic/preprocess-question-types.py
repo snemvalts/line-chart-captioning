@@ -141,8 +141,8 @@ def unroll_descriptions(data):
     return new_data
 
 
-def write_captions_csv(data, dest_folder_name):
-    def get_row(plot):
+def write_captions_csv(data, dest_folder_name, unroll=False):
+    def get_rows(plot):
         image_number = plot['image_number']
         all_subjects = list(map(lambda x: x['name'], plot['data']))
 
@@ -154,8 +154,12 @@ def write_captions_csv(data, dest_folder_name):
             color2_name = description['color2_name']
             descriptions.append([description_type, color1_name, color2_name])
 
-
-        return [image_number, json.dumps(descriptions), json.dumps(all_subjects)]
+        if (unroll):
+            # unroll descriptions to description object with single list
+            # description is array with single element for compat reasons
+            return [[image_number, json.dumps([description]), json.dumps(all_subjects)] for description in descriptions]
+        else:
+            return [[image_number, json.dumps(descriptions), json.dumps(all_subjects)]]
     
     def get_header():
         return ['number', 'description_blob', 'all_subjects_blob']
@@ -164,7 +168,9 @@ def write_captions_csv(data, dest_folder_name):
     csv_rows = []
 
     for plot in data:
-        csv_rows.append(get_row(plot))
+        rows = get_rows(plot)
+        for row in rows:
+            csv_rows.append(row)
 
     print("writing csv...")
     with open(f"data/processed_synthetic/{dest_folder_name}/captions.csv", mode="w") as captions_file:
@@ -191,6 +197,7 @@ if __name__ == "__main__":
     synthetic_config = json.load(open(sys.argv[sys.argv.index('--synthetic-config') + 1], 'r')) if synthetic_config_flag_present else None
 
     replace_subjects_flag_present = '--replace-subjects' in sys.argv[1:]
+    unroll_flag_present = '--unroll' in sys.argv[1:]
 
     src_folder = sys.argv[-1]
 
@@ -209,4 +216,4 @@ if __name__ == "__main__":
     pathlib.Path(f"data/processed_synthetic/{dest_folder_name}/images").mkdir(parents=True, exist_ok=True)
     copy_images(data, src_folder, dest_folder_name)
     #write_metadata_json(data)
-    write_captions_csv(data, dest_folder_name)
+    write_captions_csv(data, dest_folder_name, unroll=unroll_flag_present)
