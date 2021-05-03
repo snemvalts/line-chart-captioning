@@ -1,5 +1,5 @@
 # line-chart-captioning
-This repository is for creating a model that manages to create natural language descriptions from line graphs.
+This repository is for creating a machine learning model that manages to create natural language descriptions for line graphs.
 
 
 ## Dataset
@@ -21,9 +21,18 @@ This flag unrolls the descriptions, to create `n` rows in `captions.csv` if ther
 * `--replace-subjects`: Replaces subjects in descriptions. For example `Red is greater than Blue` becomes `<A> is greater than <B>`.
 This flag also adds `subject_map` column to `captions.csv`, so for every plot there is a JSON blob string that maps replacements to original subjects.
 * `--description-limit N`: Limits description length in sentences. Cannot be present together with `--unroll-descriptions`
-* `--synthetic-config FILE`: Provide a config file for custom question templates and desired question types. An example file is provided (`synthetic.default.json`). For correct forms, check `question_to_description` in `src/synthetic/preprocess.py`. For question IDs, check keys in `question_type_to_id`
+* `--synthetic-config PATH_TO_FILE`: Provide a config file for custom question templates and desired question types. An example file is provided (`synthetic.default.json`). For correct forms, check `question_to_description` in `src/synthetic/preprocess.py`. For question IDs, check keys in `question_type_to_id`
 
 Dataset will be placed to `data/processed_synthetic/X`.
+
+
+### Generating synthetic "question-types" dataset
+
+To generate the synthetic "question types" dataset, place the downloaded folders to `data/figureqa` (check the README there), and run 
+
+```python3 src/synthetic/preprocess-question-types.py data/fiqureqa/X```
+
+Subject replacement (`--replace-subjects`), unrolling (`--unroll`) and synthetic config flag (`--synthetic-config`) can be provided, as for generating the normal synthetic dataset.
 
 ### Generating natural-language dataset
 
